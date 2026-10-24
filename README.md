@@ -33,7 +33,7 @@ py main.py --reset           # re-initialise the sample data, then open the menu
 python3 web_app.py           # macOS
 py web_app.py                # Windows
 ```
-Your browser opens at http://127.0.0.1:8000 (only reachable from your own computer; press Ctrl+C in the terminal to stop).
+browser opens at http://127.0.0.1:8000 (only reachable from your own computer; press Ctrl+C in the terminal to stop).
 Options: `--port 9000` to change the port, `--no-browser` to not auto-open. `main.py --web` or menu option 14 also launch it.
 
 In the dashboard you can click a disk to fail or replace it, corrupt or delete any file on any disk, fill a disk to trigger
