@@ -59,7 +59,7 @@ and watch the status chips, capacity bars and activity log update live. A hint b
 
 Generated files appear in `storage_sim/` (`disks/`, `manifest/`, `logs/operations.log`, `reports/`).
 
-## Suggested 5-minute demonstration
+## demonstration
 1. Run `--demo`, or in the menu: **1** (initialise) then **2** (health/capacity).
 2. **7 -> 1** corrupt a file on DISK-A, then **3** shows `CORRUPT / REPAIRABLE`, then **8** self-heals from the mirror.
 3. **4 -> 2** fail a disk (array DEGRADED, data still readable), **4 -> 3** replace and rebuild.
@@ -68,7 +68,7 @@ Generated files appear in `storage_sim/` (`disks/`, `manifest/`, `logs/operation
 6. **7 -> 5** fill DISK-A to 92% and see the CRITICAL capacity alert in **2**.
 7. **9** benchmark, **10** disaster recovery analysis, **11** reports.
 
-## Points to explain in the project review
+## project review
 1. **SHA-256** gives each file a fixed-length fingerprint; any change alters it.
 2. **Integrity checking** compares current checksums with the trusted baseline manifest (a second copy of the manifest is kept so tampering is detectable).
 3. **RAID 1** writes every file to two disks; if one fails or is corrupt, the other copy serves reads and repairs it. RAID is not a backup: deleting a file deletes it from both disks.
