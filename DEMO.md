@@ -1,8 +1,7 @@
-# Demonstration Guide (about 7 minutes)
+# Demonstration Guide 
 
 > RAID, replication and failover are software simulations (folders as disks), not physical SAN hardware. Say this at the start.
 
-## Before you present
 1. Open a terminal in the project folder.
 2. Mac: `python3 web_app.py`   |   Windows: `py web_app.py`
 3. The dashboard opens at http://127.0.0.1:8000. Click **Reset system** once so you start from a clean state.
@@ -31,15 +30,11 @@
 
 Tip: always use **Recover all** or **Reset system** before moving on, so the next step starts from a healthy state.
 
-## Console fallback (if asked to show the terminal)
+## Console fallback 
 1. `python3 main.py` (Windows: `py main.py`)
 2. Menu 2 (health) -> 7 (inject corruption) -> 3 (integrity check) -> 8 (auto recovery)
 3. Menu 4 (RAID) -> fail a disk -> replace and rebuild
 4. Menu 5 (replication) -> fail over -> fail back
 5. Menu 9 (benchmark), 10 (DR analysis), 11 (reports)
 
-## Likely questions
-- **Is this a real SAN?** No. It simulates SAN data-protection concepts in software, and the code is labelled that way.
-- **Why isn't RAID enough?** It protects against disk failure, not deletion, corruption written to both disks, or site loss.
-- **Why check checksums before replicating?** So corrupted data is not copied over a good replica.
-- **What are RTO and RPO?** RTO is how fast you recover; RPO is how much data you can afford to lose.
+
