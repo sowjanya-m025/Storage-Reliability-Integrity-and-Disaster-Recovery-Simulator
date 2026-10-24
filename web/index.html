@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storage Reliability Simulator</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#1c2430;--mut:#6b7686;--line:#e2e7ef;--ok:#1e9e5a;--warn:#e69a14;--bad:#d93c3c;--off:#8b95a5;--acc:#2f6fed;--pur:#8250df}
+@media(prefers-color-scheme:dark){:root{--bg:#10151c;--card:#19202a;--ink:#e6ebf2;--mut:#93a0b3;--line:#2a3442}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:14px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.sub{color:var(--mut);font-size:12px}
+main{padding:16px 22px;max-width:1280px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+@media(max-width:980px){.cols{grid-template-columns:1fr}}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:600;font-size:12px;color:#fff;background:var(--off)}
+.b-ok{background:var(--ok)}.b-warn{background:var(--warn)}.b-bad{background:var(--bad)}.b-pur{background:var(--pur)}.b-acc{background:var(--acc)}
+.hint{padding:11px 14px;border-radius:10px;margin-bottom:14px;font-weight:500;border:1px solid var(--line);border-left:6px solid var(--ok);background:var(--card)}
+.hint.warn{border-left-color:var(--warn)}.hint.bad{border-left-color:var(--bad)}
+.disk{border:2px solid var(--line);border-radius:12px;padding:12px;transition:.3s}
+.disk.FAILED{border-color:var(--bad);background:rgba(217,60,60,.08)}
+.disk.WARNING{border-color:var(--warn)}.disk.CRITICAL{border-color:var(--bad)}
+.disk h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.meter{height:12px;background:var(--line);border-radius:7px;overflow:hidden;margin:10px 0 4px}
+.meter div{height:100%;background:var(--ok);transition:width .6s,background .3s}
+.meter div.WARNING{background:var(--warn)}.meter div.CRITICAL{background:var(--bad)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 11px;transition:.15s}
+button:hover{border-color:var(--acc);transform:translateY(-1px)}
+button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.d{color:var(--bad)}button.sm{padding:2px 7px;font-size:12px}
+button:disabled{opacity:.5;cursor:wait;transform:none}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 7px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--mut);font-weight:600}
+.scroll{overflow-x:auto}
+.chip{display:inline-block;padding:1px 8px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:var(--off)}
+.OK{background:var(--ok)}.CORRUPT,.DAMAGED,.FAILED{background:var(--bad)}.MISSING,.REPAIRABLE,.STALE{background:var(--warn)}.UNTRACKED{background:var(--pur)}
+input,textarea{font:inherit;width:100%;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);margin-bottom:8px}
+#log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:260px;overflow:auto;background:var(--bg);border-radius:8px;padding:8px}
+#log .WARN{color:var(--warn)}
+.toast{position:fixed;right:18px;bottom:18px;max-width:430px;padding:12px 16px;border-radius:10px;color:#fff;background:var(--ok);box-shadow:0 6px 24px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:.3s;z-index:20}
+.toast.show{opacity:1;transform:none}.toast.err{background:var(--bad)}
+.bar2{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px}
+.bar2 span.l{width:150px;color:var(--mut)}.bar2 .b{height:12px;border-radius:4px;background:var(--acc)}.bar2 .b.r{background:var(--pur)}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);max-width:640px;width:92%}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);padding:10px;border-radius:8px;max-height:300px;overflow:auto}
+.mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Storage Reliability, Integrity &amp; Disaster Recovery Simulator</h1>
+  <div class="sub">Interactive SAN-concept simulation. Disks are folders &mdash; RAID, replication and failover are software simulations, not physical hardware.</div></div>
+  <div class="row" style="align-items:center">
+    <span>RAID 1:</span><span id="raidBadge" class="badge">-</span>
+    <span>Serving from:</span><span id="siteBadge" class="badge">-</span>
+    <span>Manifest:</span><span id="manBadge" class="badge">-</span>
+  </div>
+</header>
+<main>
+  <div id="hint" class="hint">Loading...</div>
+
+  <div class="card">
+    <h2>1. Simulated disks (click to fail or replace)</h2>
+    <div id="disks" class="grid4"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Actions</h2>
+    <div class="row">
+      <button class="p" data-a="recover">Recover all (mirror &rarr; replica &rarr; backup)</button>
+      <button data-a="sync">Replicate to replica (Sync)</button>
+      <button data-a="backup">Create verified backup</button>
+      <button data-a="failover">Fail over to replica</button>
+      <button data-a="failback">Repair primary &amp; fail back</button>
+      <button data-a="fill">Fill DISK-A to 92%</button>
+      <button data-a="unfill">Remove filler</button>
+      <button class="d" data-a="init" data-confirm="Reset everything and reload the sample data?">Reset system</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h2>3. Files &amp; integrity (SHA-256 vs trusted baseline)</h2>
+        <div class="scroll"><table id="files"></table></div>
+        <div class="sub" style="margin-top:8px">Try it: click <b>Corrupt A</b>, watch the status change, then click <b>Recover all</b>. Click <b>Delete everywhere</b> to test backup recovery.</div>
+      </div>
+      <div class="card">
+        <h2>4. Performance benchmark (single disk vs RAID 1)</h2>
+        <button data-a="benchmark">Run benchmark</button>
+        <div id="bench" style="margin-top:10px" class="mut">Not run yet.</div>
+      </div>
+      <div class="card">
+        <h2>5. Disaster recovery analysis (RTO / RPO)</h2>
+        <button data-a="dr">Run 5 disaster scenarios</button>
+        <div id="dr" style="margin-top:10px" class="mut">Not run yet. This injects failures, recovers, and checks objectives.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Add / update a file</h2>
+        <input id="newName" placeholder="documents/my_note.txt">
+        <textarea id="newText" rows="3" placeholder="File content"></textarea>
+        <button class="p" id="addBtn">Write to RAID array</button>
+        <div class="sub" style="margin-top:6px">New data is unprotected until you Sync and Backup (this is how RPO works).</div>
+      </div>
+      <div class="card"><h2>Replication &amp; backups</h2><div id="repl" class="mut"></div><div id="backups" style="margin-top:8px"></div>
+        <div style="margin-top:8px"><button data-a="report">Generate report files</button></div></div>
+      <div class="card"><h2>Activity log</h2><div id="log"></div></div>
+    </div>
+  </div>
+</main>
+<dialog id="dlg"><h2 id="dlgT"></h2><div class="sub" id="dlgS"></div><pre id="dlgP"></pre><button onclick="dlg.close()">Close</button></dialog>
+<div id="toast" class="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let busy = false;
+
+function toast(msg, ok){
+  const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (ok ? '' : ' err');
+  clearTimeout(toast.h); toast.h = setTimeout(()=>t.className='toast', 6000);
+}
+async function act(body){
+  if (busy) return null;
+  busy = true; document.querySelectorAll('button').forEach(b=>b.disabled=true);
+  try{
+    const r = await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j = await r.json(); toast(j.message || 'Done', j.ok !== false);
+    busy = false; document.querySelectorAll('button').forEach(b=>b.disabled=false);
+    await load(); return j;
+  }catch(e){ toast('Server not reachable: '+e, false); }
+  busy = false; document.querySelectorAll('button').forEach(b=>b.disabled=false); return null;
+}
+function chip(s){ return '<span class="chip '+esc(s)+'">'+esc(s)+'</span>'; }
+function fmt(n){ return n>=1048576 ? (n/1048576).toFixed(2)+' MB' : n>=1024 ? (n/1024).toFixed(1)+' KB' : n+' B'; }
+
+function render(s){
+  const rb = $('raidBadge'); rb.textContent = s.raid;
+  rb.className = 'badge ' + (s.raid==='OPTIMAL'?'b-ok':s.raid==='DEGRADED'?'b-warn':'b-bad');
+  const sb = $('siteBadge'); sb.textContent = s.site; sb.className = 'badge ' + (s.site==='PRIMARY'?'b-ok':'b-warn');
+  const mb = $('manBadge'); mb.textContent = s.manifest_trusted ? 'TRUSTED' : 'MISMATCH'; mb.className = 'badge ' + (s.manifest_trusted?'b-ok':'b-bad');
+
+  $('disks').innerHTML = s.disks.map(d=>{
+    const lvl = d.status==='FAILED' ? 'FAILED' : d.alert;
+    const pct = d.pct==null ? 0 : d.pct;
+    return '<div class="disk '+lvl+'"><h3>'+esc(d.name)+' <span class="badge '+(d.status==='ONLINE'?'b-ok':'b-bad')+'">'+d.status+'</span></h3>'+
+      '<div class="sub">'+esc(d.role)+'</div>'+
+      '<div class="meter"><div class="'+lvl+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="sub">'+(d.status==='ONLINE' ? d.used_mb+' / '+d.capacity_mb+' MB ('+pct+'%)'+(d.alert==='WARNING'||d.alert==='CRITICAL'?' &mdash; <b>'+d.alert+'</b>':'') : 'Disk unavailable')+'</div>'+
+      '<div class="row" style="margin-top:8px">'+(d.status==='ONLINE'
+        ? '<button class="sm d" data-a="fail_disk" data-disk="'+d.key+'">Fail this disk</button>'
+        : '<button class="sm p" data-a="replace_disk" data-disk="'+d.key+'">Replace disk</button>')+'</div></div>';
+  }).join('');
+
+  const down = s.raid==='FAILED';
+  const bad = down ? [] : s.files.filter(f=>!['OK','UNTRACKED'].includes(f.overall));
+  $('files').innerHTML = '<tr><th>File</th><th>Size</th><th>DISK-A</th><th>DISK-B</th><th>Replica</th><th>Backup</th><th>Result</th><th>Simulate</th></tr>' +
+    s.files.map(f=>{
+      const n = esc(f.name);
+      const btn = (a,l,d,cls)=>'<button class="sm '+(cls||'')+'" data-a="'+a+'" data-file="'+n+'"'+(d?' data-disk="'+d+'"':'')+'>'+l+'</button> ';
+      const tracked = f.overall!=='UNTRACKED';
+      return '<tr><td><a href="#" data-a="view_file" data-file="'+n+'">'+n+'</a></td><td>'+fmt(f.size)+'</td><td>'+chip(f.a)+'</td><td>'+chip(f.b)+'</td><td>'+chip(f.replica==='-'?'-':f.replica==='STALE/CORRUPT'?'STALE':f.replica)+'</td><td>'+(f.backup?'<span class="chip OK">OK</span>':'<span class="chip MISSING">none</span>')+'</td><td>'+chip(down?'UNAVAILABLE':f.overall)+'</td><td>'+
+        (tracked ? btn('corrupt','Corrupt A','disk_a')+btn('corrupt','Corrupt B','disk_b')+btn('delete_array','Del A+B','','d')+btn('delete_all','Del everywhere','','d')+btn('restore_file','Restore from backup') : '')+'</td></tr>';
+    }).join('');
+
+  const hint = $('hint'); let cls='', msg='All systems healthy. Inject a fault above to see how the storage system reacts.';
+  const failedRaid = s.disks.filter(d=>(d.key==='disk_a'||d.key==='disk_b')&&d.status==='FAILED');
+  if (s.site==='REPLICA'){cls='warn';msg='Failover active: users are served from the replica. Click "Repair primary & fail back" to return to the primary array.';}
+  else if (s.raid==='FAILED'){cls='bad';msg='Both RAID disks failed - the primary array is down. Click "Fail over to replica" to keep service running.';}
+  else if (s.raid==='DEGRADED'){cls='warn';msg='RAID is DEGRADED: data is still available from the surviving disk. Replace '+failedRaid.map(d=>d.name).join(', ')+' to rebuild the mirror.';}
+  else if (bad.length){cls='bad';msg=bad.length+' file(s) damaged or missing. Click "Recover all" to repair them from the mirror, replica or backup.';}
+  else if (s.disks.some(d=>d.alert==='CRITICAL'||d.alert==='WARNING')){cls='warn';msg='Capacity alert: a disk is almost full. Remove the filler or free space.';}
+  else if (s.disks.some(d=>d.status==='FAILED')){cls='warn';msg='A non-RAID disk (replica or backup vault) is offline. Replace it and re-sync / re-backup.';}
+  else if (s.lag && s.lag.length){cls='warn';msg='Replica is behind by '+s.lag.length+' file(s). Click "Replicate to replica" to sync.';}
+  hint.className='hint '+cls; hint.textContent=msg;
+
+  $('repl').innerHTML = s.lag===null ? 'Replica site is OFFLINE.' : (s.lag.length ? 'Replica lag: <b>'+s.lag.length+' file(s)</b> out of sync.' : 'Replica is fully in sync with the baseline.');
+  $('backups').innerHTML = s.backups.length ? '<table><tr><th>Backup</th><th>Files</th><th>Status</th></tr>'+s.backups.slice(-5).reverse().map(b=>'<tr><td>'+esc(b.id.replace('backup_',''))+'</td><td>'+b.files+'</td><td>'+chip(b.bad?'CORRUPT':'OK')+'</td></tr>').join('')+'</table>' : '<span class="mut">No backups.</span>';
+  $('log').innerHTML = s.log.slice().reverse().map(l=>'<div class="'+(l.includes('[WARN]')?'WARN':'')+'">'+esc(l.slice(11))+'</div>').join('');
+}
+async function load(){
+  try{ const r = await fetch('/api/state'); const s = await r.json(); if(s.error){toast(s.error,false);return;} render(s); }
+  catch(e){ $('hint').textContent='Cannot reach the Python server. Is it still running?'; }
+}
+
+document.addEventListener('click', async e=>{
+  const el = e.target.closest('[data-a]'); if(!el) return; e.preventDefault();
+  if (el.dataset.confirm && !confirm(el.dataset.confirm)) return;
+  const body = {action: el.dataset.a}; if(el.dataset.disk) body.disk = el.dataset.disk; if(el.dataset.file) body.file = el.dataset.file;
+  const j = await act(body); if(!j) return;
+  if (j.view){ $('dlgT').textContent=j.view.name; $('dlgS').textContent='Source: '+j.view.source+' | SHA-256: '+j.view.sha256; $('dlgP').textContent=j.view.text; $('dlg').showModal(); }
+  if (j.bench) renderBench(j.bench);
+  if (j.dr) renderDR(j.dr, j.objectives);
+});
+$('addBtn').onclick = async ()=>{ const j = await act({action:'add_file',name:$('newName').value,content:$('newText').value}); if(j&&j.ok){$('newName').value='';$('newText').value='';} };
+
+function renderBench(rows){
+  const mx = Math.max(...rows.map(r=>r.write_ms));
+  let h = '<table><tr><th>Size</th><th>Config</th><th>Write ms</th><th>Read ms</th></tr>'+rows.map(r=>'<tr><td>'+r.size_kb+' KB</td><td>'+r.config+'</td><td>'+r.write_ms.toFixed(2)+'</td><td>'+r.read_ms.toFixed(2)+'</td></tr>').join('')+'</table><div style="margin-top:10px"><b>Write latency</b> (shorter is faster)</div>';
+  h += rows.map(r=>'<div class="bar2"><span class="l">'+r.size_kb+' KB '+r.config+'</span><div class="b '+(r.config.startsWith('RAID')?'r':'')+'" style="width:'+Math.max(2,260*r.write_ms/mx)+'px"></div><span>'+r.write_ms.toFixed(2)+' ms</span></div>').join('');
+  h += '<div class="sub" style="margin-top:6px">RAID 1 writes to two disks, so writes cost more; reads can use either copy. Absolute numbers depend on your computer and OS caching.</div>';
+  $('bench').innerHTML = h;
+}
+function renderDR(rows, obj){
+  $('dr').innerHTML = '<div class="sub">Objectives: RTO &le; '+obj[0]+' s, data loss &le; '+obj[1]+' file(s)</div><div class="scroll"><table><tr><th>Scenario</th><th>Affected</th><th>Recovered</th><th>Lost</th><th>Time (s)</th><th>Avail %</th><th>RTO</th><th>RPO</th></tr>'+
+    rows.map(r=>'<tr><td>'+esc(r.scenario)+'<div class="sub">'+esc(r.note)+'</div></td><td>'+r.files_affected+'</td><td>'+r.recovered+'</td><td>'+r.data_lost+'</td><td>'+r.recovery_time_s+'</td><td>'+r.availability_pct+'</td><td>'+chip(r.RTO_met==='YES'?'OK':'FAILED')+'</td><td>'+chip(r.RPO_met==='YES'?'OK':'FAILED')+'</td></tr>').join('')+'</table></div>';
+}
+load(); setInterval(()=>{ if(!busy) load(); }, 5000);
+</script>
+</body>
+</html>
